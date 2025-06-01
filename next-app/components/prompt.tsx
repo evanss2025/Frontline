@@ -9,48 +9,31 @@ import { spec } from 'node:test/reporters';
 
 export default function Prompt() {
 
-  //approval rate
-
-
-  
-
-  function approvalRate(factor1: number, factor2: number, factor3: number) {
-    console.log(factor1, factor2, factor3);
-  }
-
-
   //add calculatepeopleaffected function 
     // random number between 0-1000(0, potentially) - JS function? - 
     // add image of "people"
-    const [affectedPeople, setAffectedPeople] = useState(() => Math.floor(Math.random() * 10000));
-    function getAffectedPeople(max=100000) {
-        console.log("running");
-        return Math.floor(Math.random() * max);
-      }
-      // Generate a number immediately on component mount
-      useEffect(() => {
-      // Generate a number immediately on mount
-      setAffectedPeople(getAffectedPeople());
-  
-      // Set up interval to update every 30 seconds (30000 ms)
-      const interval = setInterval(() => {
-        setAffectedPeople(prev => {
-          const next = getAffectedPeople();
-          return next > prev ? next : prev; // Ensure it only increases
-        });
-      }, 5000);
-  
-      // Clean up interval on unmount
-      return () => clearInterval(interval);
-    }, []);
+    const [affectedPeople, setAffectedPeople] = useState(0);
 
-    function getDataPoints(days: number) {
-      const dataPoints = [];
-      for (let i = 0; i < days; i++) {
-        dataPoints[i] = affectedPeople;
-      }
-      return dataPoints;
+    function updateAffectedPeople(max=100000) {
+        console.log("running");
+        if (approvalRate === 0) {
+          setAffectedPeople(affectedPeople + (Math.floor(Math.random() * max)));
+        } if (approvalRate > 75) {
+          setAffectedPeople(affectedPeople - (Math.floor(Math.random() * max)) * ((100 - approvalRate) / 100));
+        } else {
+          setAffectedPeople(affectedPeople + (Math.floor(Math.random() * max)) * ((100- approvalRate) / 100));
+        }
+        
+
     }
+  
+    // function getDataPoints(days: number) {
+    //   const dataPoints = [];
+    //   for (let i = 0; i < days; i++) {
+    //     dataPoints[i] = affectedPeople;
+    //   }
+    //   return dataPoints;
+    // }
 
   let nextDayClicked = 0;
 
@@ -75,8 +58,31 @@ export default function Prompt() {
   const [storySoFar, setStorySoFar] = useState('');
   const [species, setSpecies] = useState('');
   const [started, setStarted] = useState(false);
+  const [approvalRate, setApprovalRate] = useState(0);
+  const [advice, setAdvice] = useState('');
+  const [supplies, setSupplies] = useState('');
+  const [dailyAffectedPeople, setDailyAffectedPeople] = useState<number[]>([]);
+  const [currentDay, setCurrentDay] = useState(1);
+
+  function progressDay() {
+    const newAffected = Math.floor(Math.random() * 100000); // Replace w/ your logic
+    setDailyAffectedPeople(prev => {
+      const updated = [...prev];
+      updated[currentDay - 1] = newAffected; // Set value for current day (0-indexed)
+      return updated;
+    });
+    setCurrentDay(prev => Math.min(prev + 1, 7));
+  }
+
+  const casualties = dailyAffectedPeople.map(val => Math.floor(val / 10));
+
+
 
   const fetchTimeline = async () => {
+
+    progressDay();
+
+    updateAffectedPeople();
 
     setStarted(true);
 
@@ -86,9 +92,6 @@ export default function Prompt() {
     const nextDayButton = document.getElementById('next_day') as HTMLButtonElement;
     const simulateDiv = document.getElementById('prompt_main') as HTMLButtonElement;
     const userDiv = document.getElementById('userInput') as HTMLButtonElement;
-    const affected = document.getElementById('people_affected') as HTMLDivElement;
-
-    affected.appendChild({affectedPeople});
 
 
     if (day == 1) {
@@ -120,9 +123,23 @@ export default function Prompt() {
 
       const data: { timeline: event[] } = await res.json();
       setDay(day + 1);
+
       setEventName(data.timeline[0].event);
-      setSpecies(data.timeline[1].event + "\n" + data.timeline[2].event + "\n" + data.timeline[3].event + "\n");
+      setSpecies(data.timeline[1].event);
       setEvent(data.timeline);
+
+      const rawEvent = data.timeline[2].event;
+      const match = rawEvent.match(/\d+/); // Extract digits from the string
+
+      if (match) {
+        const number = parseInt(match[0], 10); // Convert to integer
+        setApprovalRate(number);
+      } else {
+        setApprovalRate(50); // fallback if no number found
+      }
+      setAdvice(data.timeline[3].event);
+      setSupplies(data.timeline[4].event);
+
       console.log('Timeline data:', data.timeline);
       console.log(species);
     } catch (err) {
@@ -190,7 +207,7 @@ export default function Prompt() {
               <ul className="space-y-2">
                   <div>
                     <h1 className="text-xl font-semibold mb-2 text-white">Day: {day - 1}</h1>
-                    <li  className="border p-2 rounded bg-gray-100">
+                    <li  className="border p-2 rounded bg-white text-black">
                       <strong>Report:</strong> {eventName}
                     </li>
                   </div>
@@ -204,9 +221,9 @@ export default function Prompt() {
       <div className="grid grid-cols-3 gap-5" w-full>
           <Card 
             id="people_affected"
-            className="block text-7xl mt-2 text-red-400 font-mono items-center"
+            className="block text-7xl mt-2 text-red-400 font-mono justify-center"
             title="Number of People Affected:"
-            body=""
+            body={affectedPeople}
             />
 
           <Card
@@ -220,31 +237,31 @@ export default function Prompt() {
             id="casualties_over_time"
             className="bg-white"
             title="Casualties over Time:"
-            body={<LineChart inputData={getDataPoints(day - 1)} day={1} />}
+            body={<LineChart inputData={casualties} day={1} />}
             
           />
 
           <Card 
             id="approval_rate"
-            className=""
+            className="block text-7xl mt-2 text-red-400 font-mono items-center"
             title="Approval Rate:"
-            body="placeholder"
+            body={approvalRate}
           />
 
           <Card 
             id="advice"
             className=""
             title="Advice:"
-            body="placeholder"
+            body={advice}
           />
 
           <Card 
             id="supplies"
             className=""
             title="Supplies:"
-            body="placeholder"
+            body={supplies}
           />
-          
+
         </div>
     </div>
 
