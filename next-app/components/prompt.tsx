@@ -223,7 +223,7 @@ export default function Prompt() {
             id="people_affected"
             className="block text-7xl mt-2 text-red-400 font-mono justify-center"
             title="Number of People Affected:"
-            body={affectedPeople}
+            body={Math.round(affectedPeople)}
             />
 
           <Card
@@ -245,7 +245,7 @@ export default function Prompt() {
             id="approval_rate"
             className="block text-7xl mt-2 text-red-400 font-mono items-center"
             title="Approval Rate:"
-            body={approvalRate}
+            body={approvalRate + "%"}
           />
 
           <Card 
